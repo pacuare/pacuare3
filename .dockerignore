@@ -1,7 +1,5 @@
 node_modules/
 .git/
-.wrangler/
-workers/
 test/
 scripts/
 .buildkite/

@@ -30,6 +30,15 @@ steps:
           run: app
           config: .buildkite/docker-compose.yml
 
-  - label: ':docker: Build image'
-    command:
-      - docker build --tag pacuare3:$BUILDKITE_COMMIT .
+  - label: ':docker: Build and publish image'
+    env:
+      REGISTRY: packages.buildkite.com/pacuare/pacuare
+    command: |
+      buildkite-agent oidc request-token \
+        --audience "https://$$REGISTRY" \
+        --lifetime 300 \
+        | docker login "$$REGISTRY" --username buildkite --password-stdin
+      docker buildx build \
+        --tag "$$REGISTRY/pacuare3:$$BUILDKITE_COMMIT" \
+        --push \
+        .
