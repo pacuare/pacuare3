@@ -39,6 +39,10 @@ export const userSprites = table({
       .notNull()
       .default('provisioning'),
     notebook_url: c.text().nullable(),
+    // marimo's own access-token, extracted from the "marimo" service's startup
+    // logs -- lets the "Open notebook" link log the user straight in instead
+    // of landing on marimo's token prompt.
+    notebook_token: c.text().nullable(),
     last_error: c.text().nullable(),
     created_at: c.timestamp().notNull().defaultNow(),
     updated_at: c.timestamp().notNull().defaultNow(),

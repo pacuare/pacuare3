@@ -3,7 +3,7 @@ import { db } from '../db.ts'
 import { exportPacuareRaw, type TableExport } from '../data-source.ts'
 import { env } from '../env.ts'
 import { userSprites, type UserSprite } from '../schema.ts'
-import { SpritesApiError, SpritesClient, type SpritesClientLike } from './client.ts'
+import { SpritesApiError, SpritesClient, type ServiceLogEvent, type SpritesClientLike } from './client.ts'
 import { buildBootstrapScript, buildNotebook } from './templates.ts'
 
 const defaultSprites = new SpritesClient(env.spritesToken, env.spritesBaseUrl)
@@ -34,6 +34,17 @@ const MARIMO_SERVICE = {
   httpPort: 8080,
   needs: ['setup'],
   dir: '/app',
+}
+
+const MARIMO_ACCESS_TOKEN_PATTERN = /access_token=([A-Za-z0-9_-]+)/
+
+/** Pulls marimo's random access token out of the "marimo" service's startup logs. */
+export function extractMarimoAccessToken(events: ServiceLogEvent[]): string | null {
+  for (let event of events) {
+    let match = event.data?.match(MARIMO_ACCESS_TOKEN_PATTERN)
+    if (match) return match[1]!
+  }
+  return null
 }
 
 export function spriteNameForUser(id: number, email: string): string {
@@ -105,13 +116,15 @@ export async function provisionUserSprite(
       ],
       dir: '/app',
     })
-    await sprites.createService(name, 'marimo', MARIMO_SERVICE)
+    let marimoEvents = await sprites.createService(name, 'marimo', MARIMO_SERVICE)
+    let notebookToken = extractMarimoAccessToken(marimoEvents)
 
     let sprite = await sprites.getSprite(name)
 
     await db.update(userSprites, record.id, {
       status: 'ready',
       notebook_url: sprite.url ?? null,
+      notebook_token: notebookToken,
       last_error: null,
       updated_at: new Date(),
     })
@@ -136,6 +149,7 @@ export async function destroyUserSprite(
   await db.update(userSprites, record.id, {
     status: 'deleted',
     notebook_url: null,
+    notebook_token: null,
     updated_at: new Date(),
   })
 }
