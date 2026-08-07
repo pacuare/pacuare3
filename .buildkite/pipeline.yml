@@ -21,6 +21,7 @@ steps:
           config: .buildkite/docker-compose.yml
 
   - label: ':postgres: Test'
+    key: test
     command:
       - npm ci
       - npm run db:migrate
@@ -30,7 +31,11 @@ steps:
           run: app
           config: .buildkite/docker-compose.yml
 
+  # Only publishes once the tests above pass; docker buildx build --push
+  # itself won't attempt the push if the build stage fails.
   - label: ':docker: Build and publish image'
+    depends_on:
+      - test
     env:
       REGISTRY: packages.buildkite.com/aleks-rutins/pacuare
     command: |
@@ -38,7 +43,9 @@ steps:
         --audience "https://$$REGISTRY" \
         --lifetime 300 \
         | docker login "$$REGISTRY" --username buildkite --password-stdin
+      branch_tag="$${BUILDKITE_BRANCH//\//-}"
       docker buildx build \
         --tag "$$REGISTRY/pacuare3:$$BUILDKITE_COMMIT" \
+        --tag "$$REGISTRY/pacuare3:$$branch_tag" \
         --push \
         .
