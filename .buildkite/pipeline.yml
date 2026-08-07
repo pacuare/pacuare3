@@ -29,3 +29,7 @@ steps:
       - docker-compose#v5.13.0:
           run: app
           config: .buildkite/docker-compose.yml
+
+  - label: ':docker: Build image'
+    command:
+      - docker build --tag pacuare3:$BUILDKITE_COMMIT .
