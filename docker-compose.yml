@@ -1,0 +1,43 @@
+# Deploys the built image published by .buildkite/pipeline.yml. Not used by
+# CI (see .buildkite/docker-compose.yml for that) -- this is for running the
+# app somewhere.
+#
+# Usage:
+#   cp .env.example .env   # fill in secrets; DATABASE_URL/DATA_DATABASE_URL
+#                           # below are already set for the bundled postgres,
+#                           # leave DATA_DATABASE_URL pointed at the real
+#                           # canonical database instead if you have one
+#   docker compose pull
+#   docker compose run --rm app npm run db:migrate
+#   docker compose up -d
+services:
+  app:
+    image: packages.buildkite.com/aleks-rutins/pacuare/pacuare3:main
+    restart: unless-stopped
+    ports:
+      - '44100:44100'
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/pacuare_app
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pacuare_app
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  postgres-data:
