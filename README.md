@@ -88,3 +88,13 @@ npm run db:migrate && npm test
 
 `.buildkite/pipeline.yml` runs typecheck, lint, and the full test suite
 (against a real Postgres via `.buildkite/docker-compose.yml`) on every push.
+It also builds `Dockerfile` and publishes the image, tagged with the commit
+SHA, to the `pacuare` Buildkite Package Registry
+(`packages.buildkite.com/pacuare/pacuare`) for the existing container
+infrastructure to deploy from.
+
+Publishing authenticates with a short-lived Buildkite OIDC token rather than
+a static credential -- the registry needs an OIDC policy configured (see
+[OIDC in Buildkite Package
+Registries](https://buildkite.com/docs/package-registries/security/oidc))
+before the publish step will succeed.
