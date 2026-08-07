@@ -35,10 +35,10 @@ steps:
       REGISTRY: packages.buildkite.com/aleks-rutins/pacuare
     command: |
       buildkite-agent oidc request-token \
-        --audience "https://$$REGISTRY" \
+        --audience "https://$REGISTRY" \
         --lifetime 300 \
-        | docker login "$$REGISTRY" --username buildkite --password-stdin
+        | docker login "$REGISTRY" --username buildkite --password-stdin
       docker buildx build \
-        --tag "$$REGISTRY/pacuare3:$$BUILDKITE_COMMIT" \
+        --tag "$REGISTRY/pacuare3:$BUILDKITE_COMMIT" \
         --push \
         .
