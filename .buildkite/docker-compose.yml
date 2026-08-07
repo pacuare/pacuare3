@@ -1,0 +1,34 @@
+# Used by the docker-compose Buildkite plugin (see .buildkite/pipeline.yml)
+# to give CI steps a real Postgres to run migrations and integration tests
+# against. Not intended for local development -- see .env.example for that.
+services:
+  app:
+    image: node:24-bookworm-slim
+    working_dir: /workdir
+    volumes:
+      - ..:/workdir
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/pacuare_app_test
+      DATA_DATABASE_URL: postgres://postgres:postgres@postgres:5432/pacuare_data_test
+      SESSION_SECRET: ci-session-secret
+      GOOGLE_CLIENT_ID: ci-client-id
+      GOOGLE_CLIENT_SECRET: ci-client-secret
+      SPRITES_TOKEN: ci-sprites-token
+
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pacuare_app_test
+    volumes:
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 2s
+      timeout: 5s
+      retries: 15

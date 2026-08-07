@@ -9,7 +9,7 @@ export interface DocumentProps {
   title?: string
 }
 
-const DEFAULT_TITLE = readAppDisplayName('Pacuare3')
+const DEFAULT_TITLE = readAppDisplayName('Pacuare Reserve')
 
 export function Document(handle: Handle<DocumentProps>) {
   return () => {

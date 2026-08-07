@@ -1,0 +1,31 @@
+# Runs on every push, on every branch (Buildkite's default GitHub trigger
+# behavior for a connected pipeline) -- no `branches:` filter here means
+# nothing is excluded.
+steps:
+  - label: ':typescript: Typecheck'
+    command:
+      - npm ci
+      - npm run typecheck
+    plugins:
+      - docker-compose#v5.13.0:
+          run: app
+          config: .buildkite/docker-compose.yml
+
+  - label: ':eslint: Lint'
+    command:
+      - npm ci
+      - npm run lint
+    plugins:
+      - docker-compose#v5.13.0:
+          run: app
+          config: .buildkite/docker-compose.yml
+
+  - label: ':postgres: Test'
+    command:
+      - npm ci
+      - npm run db:migrate
+      - npm test
+    plugins:
+      - docker-compose#v5.13.0:
+          run: app
+          config: .buildkite/docker-compose.yml
