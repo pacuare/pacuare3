@@ -88,3 +88,49 @@ npm run db:migrate && npm test
 
 `.buildkite/pipeline.yml` runs typecheck, lint, and the full test suite
 (against a real Postgres via `.buildkite/docker-compose.yml`) on every push.
+
+## Deploying to Cloudflare
+
+This app is Node-native -- `app/assets.ts` compiles browser assets on demand
+from source files on disk, and `app/data/db.ts` / `app/data/data-source.ts`
+hold real `pg` TCP connections -- so it can't run as a plain Cloudflare
+Worker. Instead it deploys as a [Cloudflare
+Container](https://developers.cloudflare.com/containers/): the app runs
+unchanged in the Docker image built from `Dockerfile`, fronted by the thin
+Worker in `workers/container.ts` that routes all traffic to a single
+container instance.
+
+One-time setup:
+
+```sh
+npx wrangler login
+
+# Non-secret config lives in wrangler.jsonc under "vars" -- update
+# APP_ORIGIN to the real deployed origin and GOOGLE_CLIENT_ID before
+# deploying, and add that origin's /auth/google/callback as an authorized
+# redirect URI in the Google Cloud console.
+
+npx wrangler secret put DATABASE_URL
+npx wrangler secret put DATA_DATABASE_URL
+npx wrangler secret put SESSION_SECRET
+npx wrangler secret put GOOGLE_CLIENT_SECRET
+npx wrangler secret put SPRITES_TOKEN
+```
+
+Run migrations against the production `DATABASE_URL` before the first
+deploy, and again after any migration changes -- `npm run db:migrate` just
+needs network access to the database, so run it from CI or any machine that
+has it:
+
+```sh
+DATABASE_URL=<production DATABASE_URL> npm run db:migrate
+```
+
+Then build and deploy:
+
+```sh
+npm run deploy
+```
+
+`npm run cf:dev` runs the Worker + container locally with `wrangler dev`
+(requires a local Docker daemon).

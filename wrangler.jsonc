@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pacuare3",
+  "main": "workers/container.ts",
+  "compatibility_date": "2026-08-07",
+
+  // Non-secret config. Set the real values with `wrangler secret put <NAME>`
+  // instead of here: DATABASE_URL, DATA_DATABASE_URL, SESSION_SECRET,
+  // GOOGLE_CLIENT_SECRET, SPRITES_TOKEN.
+  "vars": {
+    "APP_ORIGIN": "http://localhost:44100",
+    "GOOGLE_CLIENT_ID": "",
+    "SPRITES_BASE_URL": "https://api.sprites.dev",
+  },
+
+  "containers": [
+    {
+      "class_name": "PacuareContainer",
+      "image": "./Dockerfile",
+      "instance_type": "basic",
+      "max_instances": 2,
+    },
+  ],
+
+  "durable_objects": {
+    "bindings": [{ "class_name": "PacuareContainer", "name": "PACUARE_CONTAINER" }],
+  },
+
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["PacuareContainer"] }],
+
+  "observability": { "enabled": true },
+}
