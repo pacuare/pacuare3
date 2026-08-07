@@ -32,7 +32,7 @@ steps:
 
   - label: ':docker: Build and publish image'
     env:
-      REGISTRY: packages.buildkite.com/pacuare/pacuare
+      REGISTRY: packages.buildkite.com/aleks-rutins/pacuare
     command: |
       buildkite-agent oidc request-token \
         --audience "https://$$REGISTRY" \
