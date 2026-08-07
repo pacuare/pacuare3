@@ -92,6 +92,15 @@ function SignedIn(handle: Handle<{ user: AppUser; sprite: UserSprite | null; csr
   }
 }
 
+/** The sprite's URL, with marimo's access token attached so the link logs the user straight in. */
+function notebookOpenUrl(sprite: UserSprite): string | null {
+  if (!sprite.notebook_url) return null
+  if (!sprite.notebook_token) return sprite.notebook_url
+  let url = new URL(sprite.notebook_url)
+  url.searchParams.set('access_token', sprite.notebook_token)
+  return url.toString()
+}
+
 function NotebookStatus(handle: Handle<{ sprite: UserSprite | null; csrfToken: string }>) {
   return () => {
     let { sprite, csrfToken } = handle.props
@@ -140,12 +149,14 @@ function NotebookStatus(handle: Handle<{ sprite: UserSprite | null; csrfToken: s
       )
     }
 
+    let openUrl = notebookOpenUrl(sprite)
+
     return (
       <div mix={statusBoxStyle}>
         <p mix={leadStyle}>Your notebook environment is ready.</p>
         <div mix={rowStyle}>
-          {sprite.notebook_url && (
-            <a href={sprite.notebook_url} target="_blank" rel="noreferrer" mix={buttonStyle}>
+          {openUrl && (
+            <a href={openUrl} target="_blank" rel="noreferrer" mix={buttonStyle}>
               Open notebook
             </a>
           )}

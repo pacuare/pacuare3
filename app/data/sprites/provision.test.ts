@@ -6,11 +6,12 @@ import { userSprites, users, type User } from '../schema.ts'
 import { hasTestDatabase, uniqueEmail } from '../../../test/helpers.ts'
 import {
   destroyUserSprite,
+  extractMarimoAccessToken,
   provisionUserSprite,
   spriteNameForUser,
   type ProvisionDeps,
 } from './provision.ts'
-import type { SpriteInfo, SpritesClientLike } from './client.ts'
+import type { ServiceLogEvent, SpriteInfo, SpritesClientLike } from './client.ts'
 
 describe('spriteNameForUser', () => {
   it('slugifies the email and prefixes it with the numeric id', () => {
@@ -25,6 +26,25 @@ describe('spriteNameForUser', () => {
     let a = spriteNameForUser(1, 'a.b@x.com')
     let b = spriteNameForUser(2, 'a-b@x.com')
     assert.notEqual(a, b)
+  })
+})
+
+describe('extractMarimoAccessToken', () => {
+  it('finds the token in marimo\'s startup log line', () => {
+    let events: ServiceLogEvent[] = [
+      { type: 'stdout', data: 'Starting marimo...\n', timestamp: 1 },
+      {
+        type: 'stdout',
+        data: 'URL: http://0.0.0.0:8080/?access_token=abc123-XYZ_789\n',
+        timestamp: 2,
+      },
+    ]
+    assert.equal(extractMarimoAccessToken(events), 'abc123-XYZ_789')
+  })
+
+  it('returns null when no log line contains a token', () => {
+    let events: ServiceLogEvent[] = [{ type: 'started', timestamp: 1 }]
+    assert.equal(extractMarimoAccessToken(events), null)
   })
 })
 
@@ -60,7 +80,16 @@ describe('provisionUserSprite / destroyUserSprite', () => {
         return { ...info, name }
       },
       async writeFile() {},
-      async createService() {
+      async createService(_name, serviceName) {
+        if (serviceName === 'marimo') {
+          return [
+            {
+              type: 'stdout',
+              data: 'URL: http://0.0.0.0:8080/?access_token=fake-token-123',
+              timestamp: 1,
+            },
+          ]
+        }
         return []
       },
       ...overrides,
@@ -80,6 +109,7 @@ describe('provisionUserSprite / destroyUserSprite', () => {
     assert.ok(record)
     assert.equal(record!.status, 'ready')
     assert.equal(record!.notebook_url, 'https://sprite.test')
+    assert.equal(record!.notebook_token, 'fake-token-123')
     assert.equal(record!.name, spriteNameForUser(user.id, user.email))
   })
 
@@ -118,7 +148,7 @@ describe('provisionUserSprite / destroyUserSprite', () => {
     assert.equal(record!.last_error, 'boom')
   })
 
-  it('destroy marks the record deleted and clears the notebook url', async () => {
+  it('destroy marks the record deleted and clears the notebook url and token', async () => {
     let user = await createTestUser()
     let deps: ProvisionDeps = {
       sprites: fakeSprites(),
@@ -139,6 +169,7 @@ describe('provisionUserSprite / destroyUserSprite', () => {
     let record = await db.findOne(userSprites, { where: { user_id: user.id } })
     assert.equal(record!.status, 'deleted')
     assert.equal(record!.notebook_url, null)
+    assert.equal(record!.notebook_token, null)
     assert.deepEqual(deletedNames, [spriteNameForUser(user.id, user.email)])
   })
 
