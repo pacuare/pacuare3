@@ -5,18 +5,26 @@
   "scripts": {
     "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
     "start": "NODE_ENV=production node --import remix/node-tsx server.ts",
-    "test": "NODE_ENV=test node --import remix/node-tsx --test",
-    "typecheck": "tsc --noEmit"
+    "test": "NODE_ENV=test remix test",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "db:migrate": "node --import remix/node-tsx scripts/migrate.ts"
   },
   "engines": {
     "node": ">=24.3.0"
   },
   "dependencies": {
+    "pg": "^8.13.0",
     "remix": "^3.0.0-beta.5"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "latest",
-    "typescript": "latest"
+    "@types/pg": "^8.11.0",
+    "eslint": "^10.8.0",
+    "playwright": "^1.62.1",
+    "typescript": "latest",
+    "typescript-eslint": "^8.66.0"
   },
   "allowScripts": {
     "esbuild@0.27.7": true
