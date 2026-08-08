@@ -1,4 +1,4 @@
-import type { Handle } from 'remix/ui'
+import { attrs, type Handle } from 'remix/ui'
 
 import type { UserSprite } from '../data/schema.ts'
 import type { AppUser } from '../middleware/auth.ts'
@@ -55,7 +55,12 @@ function SignedOut(handle: Handle<{ loginHref: string }>) {
   return () => (
     <div mix={rowStyle}>
       <p mix={leadStyle}>Sign in with your Google account to access your notebook environment.</p>
-      <a href={handle.props.loginHref} mix={buttonStyle}>
+      {/* rmx-document: /auth/google issues a redirect to an external origin, which the
+          client-side navigation runtime can't follow -- force a full document navigation. */}
+      <a
+        href={handle.props.loginHref}
+        mix={[buttonStyle, attrs({ 'rmx-document': '' })]}
+      >
         Sign in with Google
       </a>
     </div>
