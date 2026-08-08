@@ -1,9 +1,11 @@
+import { randomBytes } from 'node:crypto'
+
 import { toCsv } from '../../utils/csv.ts'
 import { db } from '../db.ts'
 import { exportPacuareRaw, type TableExport } from '../data-source.ts'
 import { env } from '../env.ts'
 import { userSprites, type UserSprite } from '../schema.ts'
-import { SpritesApiError, SpritesClient, type ServiceLogEvent, type SpritesClientLike } from './client.ts'
+import { SpritesApiError, SpritesClient, type SpritesClientLike } from './client.ts'
 import { buildBootstrapScript, buildNotebook } from './templates.ts'
 
 const defaultSprites = new SpritesClient(env.spritesToken, env.spritesBaseUrl)
@@ -26,25 +28,28 @@ const defaultDeps: ProvisionDeps = {
   exportPacuareRaw,
 }
 
-const MARIMO_SERVICE = {
-  cmd: 'marimo',
-  // Deliberately no `--no-token`: marimo's own random access-token URL is
-  // the only thing gating this sprite once its Sprites.dev URL is public.
-  args: ['edit', '--host', '0.0.0.0', '-p', '8080', '/app/notebook.py'],
-  httpPort: 8080,
-  needs: ['setup'],
-  dir: '/app',
+/** Equivalent to `openssl rand -hex 64`: 64 random bytes, hex-encoded. */
+export function generateNotebookToken(): string {
+  return randomBytes(64).toString('hex')
 }
 
-const MARIMO_ACCESS_TOKEN_PATTERN = /access_token=([A-Za-z0-9_-]+)/
-
-/** Pulls marimo's random access token out of the "marimo" service's startup logs. */
-export function extractMarimoAccessToken(events: ServiceLogEvent[]): string | null {
-  for (let event of events) {
-    let match = event.data?.match(MARIMO_ACCESS_TOKEN_PATTERN)
-    if (match) return match[1]!
+function marimoService(token: string) {
+  return {
+    cmd: 'marimo',
+    args: [
+      'edit',
+      '--host',
+      '0.0.0.0',
+      '-p',
+      '8080',
+      '--token-password',
+      token,
+      '/app/notebook.py',
+    ],
+    httpPort: 8080,
+    needs: ['setup'],
+    dir: '/app',
   }
-  return null
 }
 
 export function spriteNameForUser(id: number, email: string): string {
@@ -116,8 +121,8 @@ export async function provisionUserSprite(
       ],
       dir: '/app',
     })
-    let marimoEvents = await sprites.createService(name, 'marimo', MARIMO_SERVICE)
-    let notebookToken = extractMarimoAccessToken(marimoEvents)
+    let notebookToken = generateNotebookToken()
+    await sprites.createService(name, 'marimo', marimoService(notebookToken))
 
     let sprite = await sprites.getSprite(name)
 
