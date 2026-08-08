@@ -96,9 +96,7 @@ function SignedIn(handle: Handle<{ user: AppUser; sprite: UserSprite | null; csr
 function notebookOpenUrl(sprite: UserSprite): string | null {
   if (!sprite.notebook_url) return null
   if (!sprite.notebook_token) return sprite.notebook_url
-  let url = new URL(sprite.notebook_url)
-  url.searchParams.set('access_token', sprite.notebook_token)
-  return url.toString()
+  return `${sprite.notebook_url}?access_token=${encodeURIComponent(sprite.notebook_token)}`
 }
 
 function NotebookStatus(handle: Handle<{ sprite: UserSprite | null; csrfToken: string }>) {
