@@ -11,10 +11,34 @@ import { buildTar } from './tar.ts'
 /** Where each space's volume is mounted inside its container. */
 const DATA_PATH = '/data'
 
+/** The registry host portion of an image ref, e.g. `packages.buildkite.com` out of `packages.buildkite.com/org/repo:tag` -- `undefined` for a bare Docker Hub name like `postgres:16` or `library/postgres:16`. */
+export function registryHostFor(image: string): string | undefined {
+  let slashIndex = image.indexOf('/')
+  // No `/` at all means no registry/namespace component -- just `repo:tag`,
+  // where the colon is the tag separator, not part of a `host:port`.
+  if (slashIndex === -1) return undefined
+
+  let firstSegment = image.slice(0, slashIndex)
+  let looksLikeHost =
+    firstSegment.includes('.') || firstSegment.includes(':') || firstSegment === 'localhost'
+  return looksLikeHost ? firstSegment : undefined
+}
+
+/** Builds the base64 `X-Registry-Auth` header Docker expects from plain username/password config, or `undefined` when none is configured (a public image needs none). */
+function buildRegistryAuth(): string | undefined {
+  if (!env.dockerRegistryUsername || !env.dockerRegistryPassword) return undefined
+  let auth = {
+    username: env.dockerRegistryUsername,
+    password: env.dockerRegistryPassword,
+    serveraddress: env.dockerRegistryServer ?? registryHostFor(env.notebookImage),
+  }
+  return Buffer.from(JSON.stringify(auth)).toString('base64')
+}
+
 const defaultDocker = new DockerClient({
   socketPath: env.dockerSocketPath,
   apiVersion: env.dockerApiVersion,
-  registryAuth: env.dockerRegistryAuth,
+  registryAuth: buildRegistryAuth(),
 })
 
 // Only what provisioning needs from a user -- deliberately not the full

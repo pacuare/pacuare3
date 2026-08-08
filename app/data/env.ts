@@ -29,7 +29,12 @@ export const env = {
   // Image every space's container runs, built from ./notebook. Re-pulled by
   // the settings page's "Update" action.
   notebookImage: process.env.NOTEBOOK_IMAGE ?? 'pacuare3-notebook:latest',
-  // Optional base64-encoded `X-Registry-Auth` JSON (`{"username","password","serveraddress"}`),
-  // needed only if `notebookImage` lives in a private registry.
-  dockerRegistryAuth: process.env.DOCKER_REGISTRY_AUTH,
+  // Credentials for pulling `notebookImage`, only needed if it lives in a
+  // private registry. `dockerRegistryServer` is optional -- it defaults to
+  // the host parsed out of `notebookImage` itself (see
+  // `registryHostFor` in `app/data/docker/provision.ts`), and only needs
+  // setting explicitly if that doesn't resolve correctly.
+  dockerRegistryUsername: process.env.DOCKER_REGISTRY_USERNAME,
+  dockerRegistryPassword: process.env.DOCKER_REGISTRY_PASSWORD,
+  dockerRegistryServer: process.env.DOCKER_REGISTRY_SERVER,
 }
