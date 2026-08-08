@@ -6,12 +6,12 @@ import { userSprites, users, type User } from '../schema.ts'
 import { hasTestDatabase, uniqueEmail } from '../../../test/helpers.ts'
 import {
   destroyUserSprite,
-  extractMarimoAccessToken,
+  generateNotebookToken,
   provisionUserSprite,
   spriteNameForUser,
   type ProvisionDeps,
 } from './provision.ts'
-import type { ServiceLogEvent, SpriteInfo, SpritesClientLike } from './client.ts'
+import type { SpriteInfo, SpritesClientLike } from './client.ts'
 
 describe('spriteNameForUser', () => {
   it('slugifies the email and prefixes it with the numeric id', () => {
@@ -29,22 +29,15 @@ describe('spriteNameForUser', () => {
   })
 })
 
-describe('extractMarimoAccessToken', () => {
-  it('finds the token in marimo\'s startup log line', () => {
-    let events: ServiceLogEvent[] = [
-      { type: 'stdout', data: 'Starting marimo...\n', timestamp: 1 },
-      {
-        type: 'stdout',
-        data: 'URL: http://0.0.0.0:8080/?access_token=abc123-XYZ_789\n',
-        timestamp: 2,
-      },
-    ]
-    assert.equal(extractMarimoAccessToken(events), 'abc123-XYZ_789')
+describe('generateNotebookToken', () => {
+  it('generates a 128-character hex string, like `openssl rand -hex 64`', () => {
+    let token = generateNotebookToken()
+    assert.equal(token.length, 128)
+    assert.ok(/^[0-9a-f]+$/.test(token))
   })
 
-  it('returns null when no log line contains a token', () => {
-    let events: ServiceLogEvent[] = [{ type: 'started', timestamp: 1 }]
-    assert.equal(extractMarimoAccessToken(events), null)
+  it('generates a different token on each call', () => {
+    assert.notEqual(generateNotebookToken(), generateNotebookToken())
   })
 })
 
@@ -80,16 +73,7 @@ describe('provisionUserSprite / destroyUserSprite', () => {
         return { ...info, name }
       },
       async writeFile() {},
-      async createService(_name, serviceName) {
-        if (serviceName === 'marimo') {
-          return [
-            {
-              type: 'stdout',
-              data: 'URL: http://0.0.0.0:8080/?access_token=fake-token-123',
-              timestamp: 1,
-            },
-          ]
-        }
+      async createService() {
         return []
       },
       ...overrides,
@@ -98,8 +82,14 @@ describe('provisionUserSprite / destroyUserSprite', () => {
 
   it('creates a ready user_sprites row on success', async () => {
     let user = await createTestUser()
+    let marimoArgs: string[] | undefined
     let deps: ProvisionDeps = {
-      sprites: fakeSprites(),
+      sprites: fakeSprites({
+        async createService(name, serviceName, options) {
+          if (serviceName === 'marimo') marimoArgs = options.args
+          return []
+        },
+      }),
       exportPacuareRaw: async () => ({ columns: ['id'], rows: [['1']] }),
     }
 
@@ -109,8 +99,12 @@ describe('provisionUserSprite / destroyUserSprite', () => {
     assert.ok(record)
     assert.equal(record!.status, 'ready')
     assert.equal(record!.notebook_url, 'https://sprite.test')
-    assert.equal(record!.notebook_token, 'fake-token-123')
     assert.equal(record!.name, spriteNameForUser(user.id, user.email))
+    // The generated token is passed to marimo via `--token-password` and
+    // stored alongside the sprite record so the same value authenticates it.
+    let tokenIndex = marimoArgs?.indexOf('--token-password')
+    assert.ok(tokenIndex !== undefined && tokenIndex >= 0)
+    assert.equal(marimoArgs![tokenIndex! + 1], record!.notebook_token)
   })
 
   it('is idempotent: calling it again re-provisions the same sprite record', async () => {
