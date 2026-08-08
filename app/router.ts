@@ -8,6 +8,7 @@ import controller from './actions/controller.tsx'
 import authController from './actions/auth/controller.tsx'
 import authGoogleController from './actions/auth/google/controller.tsx'
 import notebookController from './actions/notebook/controller.tsx'
+import settingsController from './actions/settings/controller.tsx'
 import adminController from './actions/admin/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './data/db.ts'
@@ -49,4 +50,5 @@ router.map(routes, controller)
 router.map(routes.auth, authController)
 router.map(routes.auth.google, authGoogleController)
 router.map(routes.notebook, notebookController)
+router.map(routes.settings, settingsController)
 router.map(routes.admin, adminController)

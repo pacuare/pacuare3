@@ -36,8 +36,10 @@ describe('google sign-in', () => {
 })
 
 describe('protected routes without a session', () => {
-  it('rejects GET /admin', async () => {
-    let response = await router.fetch(new Request('http://localhost' + routes.admin.index.href()))
+  it('rejects GET /settings', async () => {
+    let response = await router.fetch(
+      new Request('http://localhost' + routes.settings.index.href()),
+    )
     assert.equal(response.ok, false)
   })
 
@@ -76,7 +78,7 @@ describe('csrf protection', () => {
   })
 })
 
-describe('admin access control', () => {
+describe('settings page access control', () => {
   if (!hasTestDatabase) {
     it.skip('requires DATABASE_URL', () => {})
     return
@@ -93,14 +95,16 @@ describe('admin access control', () => {
     let cookie = await authCookieHeader(user.id)
 
     let response = await router.fetch(
-      new Request('http://localhost' + routes.admin.index.href(), { headers: { Cookie: cookie } }),
+      new Request('http://localhost' + routes.settings.index.href(), {
+        headers: { Cookie: cookie },
+      }),
     )
 
     assert.equal(response.status, 200)
     assert.match(await response.text(), new RegExp(email))
   })
 
-  it('rejects an authenticated non-admin member with 403', async () => {
+  it('lets an authenticated non-admin member view their profile without user management', async () => {
     let email = uniqueEmail('member')
     let user = await db.create(
       users,
@@ -111,7 +115,32 @@ describe('admin access control', () => {
     let cookie = await authCookieHeader(user.id)
 
     let response = await router.fetch(
-      new Request('http://localhost' + routes.admin.index.href(), { headers: { Cookie: cookie } }),
+      new Request('http://localhost' + routes.settings.index.href(), {
+        headers: { Cookie: cookie },
+      }),
+    )
+
+    assert.equal(response.status, 200)
+    let text = await response.text()
+    assert.match(text, new RegExp(email))
+    assert.doesNotMatch(text, /Authorized users/)
+  })
+
+  it('rejects a non-admin POST to /admin/users with 403', async () => {
+    let email = uniqueEmail('member')
+    let user = await db.create(
+      users,
+      { email, google_sub: uniqueEmail('sub'), name: 'Member Test' },
+      { returnRow: true },
+    )
+    await db.create(authorizedUsers, { email, role: 'member', added_by: 'test' })
+    let cookie = await authCookieHeader(user.id)
+
+    let response = await router.fetch(
+      new Request('http://localhost' + routes.admin.addUser.href(), {
+        method: 'POST',
+        headers: { Cookie: cookie },
+      }),
     )
 
     assert.equal(response.status, 403)
@@ -129,14 +158,18 @@ describe('admin access control', () => {
 
     // Confirm the session works before revocation, then revoke and re-check.
     let before = await router.fetch(
-      new Request('http://localhost' + routes.admin.index.href(), { headers: { Cookie: cookie } }),
+      new Request('http://localhost' + routes.settings.index.href(), {
+        headers: { Cookie: cookie },
+      }),
     )
     assert.equal(before.status, 200)
 
     await db.delete(authorizedUsers, email)
 
     let after = await router.fetch(
-      new Request('http://localhost' + routes.admin.index.href(), { headers: { Cookie: cookie } }),
+      new Request('http://localhost' + routes.settings.index.href(), {
+        headers: { Cookie: cookie },
+      }),
     )
     assert.equal(after.ok, false)
   })
@@ -164,7 +197,7 @@ describe('home page when signed in', () => {
 
     assert.equal(response.status, 200)
     let text = await response.text()
-    assert.match(text, /Set up my notebook/)
-    assert.match(text, new RegExp(email))
+    assert.match(text, /You have not yet initialized your notebook server\./)
+    assert.match(text, /aria-label="New Member"/)
   })
 })

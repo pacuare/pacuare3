@@ -18,8 +18,11 @@ export const routes = route({
     destroy: post('destroy'),
   }),
 
-  admin: route('admin', {
+  settings: route('settings', {
     index: get('/'),
+  }),
+
+  admin: route('admin', {
     addUser: post('users'),
     setRole: post('users/:email/role'),
     removeUser: post('users/:email/remove'),
