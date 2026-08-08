@@ -1,21 +1,26 @@
-import { attrs, type Handle } from 'remix/ui'
+import { attrs, css, type Handle } from 'remix/ui'
 
 import type { UserSprite } from '../data/schema.ts'
 import type { AppUser } from '../middleware/auth.ts'
 import { routes } from '../routes.ts'
 import {
-  badgeStyle,
   buttonStyle,
-  dangerLinkButtonStyle,
   errorStyle,
   leadStyle,
-  linkButtonStyle,
   noticeStyle,
   PageShell,
   rowStyle,
-  statusBoxStyle,
   titleStyle,
 } from './page-shell.tsx'
+import {
+  AppShell,
+  centerColumnStyle,
+  contentMutedTextStyle,
+  contentTextStyle,
+  errorStyle as contentErrorStyle,
+  primaryButtonStyle,
+  secondaryButtonStyle,
+} from './app-shell.tsx'
 
 export interface HomePageProps {
   user: AppUser | null
@@ -36,17 +41,25 @@ export function HomePage(handle: Handle<HomePageProps>) {
   return () => {
     let { user, sprite, error, message, csrfToken, loginHref } = handle.props
 
-    return (
-      <PageShell title="Pacuare Reserve">
-        <h1 mix={titleStyle}>Pacuare Reserve</h1>
-        {error && ERROR_MESSAGES[error] && <p mix={errorStyle}>{ERROR_MESSAGES[error]}</p>}
-        {message && <p mix={noticeStyle}>{message}</p>}
-        {user ? (
-          <SignedIn user={user} sprite={sprite} csrfToken={csrfToken} />
-        ) : (
+    if (!user) {
+      return (
+        <PageShell title="Pacuare Reserve">
+          <h1 mix={titleStyle}>Pacuare Reserve</h1>
+          {error && ERROR_MESSAGES[error] && <p mix={errorStyle}>{ERROR_MESSAGES[error]}</p>}
+          {message && <p mix={noticeStyle}>{message}</p>}
           <SignedOut loginHref={loginHref} />
+        </PageShell>
+      )
+    }
+
+    return (
+      <AppShell user={user} active="home" title="Pacuare Reserve" padded={sprite?.status !== 'ready'}>
+        {sprite?.status === 'ready' ? (
+          <NotebookFrame sprite={sprite} />
+        ) : (
+          <NotebookOnboarding sprite={sprite} error={error} message={message} csrfToken={csrfToken} />
         )}
-      </PageShell>
+      </AppShell>
     )
   }
 }
@@ -57,44 +70,11 @@ function SignedOut(handle: Handle<{ loginHref: string }>) {
       <p mix={leadStyle}>Sign in with your Google account to access your notebook environment.</p>
       {/* rmx-document: /auth/google issues a redirect to an external origin, which the
           client-side navigation runtime can't follow -- force a full document navigation. */}
-      <a
-        href={handle.props.loginHref}
-        mix={[buttonStyle, attrs({ 'rmx-document': '' })]}
-      >
+      <a href={handle.props.loginHref} mix={[buttonStyle, attrs({ 'rmx-document': '' })]}>
         Sign in with Google
       </a>
     </div>
   )
-}
-
-function SignedIn(handle: Handle<{ user: AppUser; sprite: UserSprite | null; csrfToken: string }>) {
-  return () => {
-    let { user, sprite, csrfToken } = handle.props
-    return (
-      <>
-        <p mix={leadStyle}>
-          Signed in as <strong>{user.name}</strong> ({user.email})
-          {user.role === 'admin' && <span mix={badgeStyle}>admin</span>}
-        </p>
-
-        <NotebookStatus sprite={sprite} csrfToken={csrfToken} />
-
-        <div mix={rowStyle}>
-          {user.role === 'admin' && (
-            <a href={routes.admin.index.href()} mix={linkButtonStyle}>
-              Manage authorized users
-            </a>
-          )}
-          <form method="post" action={routes.auth.logout.href()}>
-            <input type="hidden" name="_csrf" value={csrfToken} />
-            <button type="submit" mix={linkButtonStyle}>
-              Sign out
-            </button>
-          </form>
-        </div>
-      </>
-    )
-  }
 }
 
 /** The sprite's URL, with marimo's access token attached so the link logs the user straight in. */
@@ -104,78 +84,70 @@ function notebookOpenUrl(sprite: UserSprite): string | null {
   return `${sprite.notebook_url}?access_token=${encodeURIComponent(sprite.notebook_token)}`
 }
 
-function NotebookStatus(handle: Handle<{ sprite: UserSprite | null; csrfToken: string }>) {
+const iframeStyle = css({ border: '0', width: '100%', height: '100%', flex: '1' })
+
+function NotebookFrame(handle: Handle<{ sprite: UserSprite }>) {
   return () => {
-    let { sprite, csrfToken } = handle.props
+    let openUrl = notebookOpenUrl(handle.props.sprite)
+    if (!openUrl) return null
+    return <iframe src={openUrl} title="Your notebook" mix={iframeStyle} />
+  }
+}
 
-    if (!sprite || sprite.status === 'deleted') {
-      return (
-        <div mix={statusBoxStyle}>
-          <p mix={leadStyle}>You don't have a notebook environment yet.</p>
-          <form method="post" action={routes.notebook.provision.href()}>
-            <input type="hidden" name="_csrf" value={csrfToken} />
-            <button type="submit" mix={buttonStyle}>
-              Set up my notebook
-            </button>
-          </form>
-        </div>
-      )
-    }
-
-    if (sprite.status === 'provisioning') {
-      return (
-        <div mix={statusBoxStyle}>
-          <p mix={leadStyle}>
-            Setting up your notebook environment. This copies the reserve data into your own
-            sandbox and starts marimo -- it can take a minute.
-          </p>
-          <a href={routes.home.href()} mix={linkButtonStyle}>
-            Refresh
-          </a>
-        </div>
-      )
-    }
-
-    if (sprite.status === 'error') {
-      return (
-        <div mix={statusBoxStyle}>
-          <p mix={errorStyle}>
-            Something went wrong setting up your notebook{sprite.last_error ? `: ${sprite.last_error}` : '.'}
-          </p>
-          <form method="post" action={routes.notebook.provision.href()}>
-            <input type="hidden" name="_csrf" value={csrfToken} />
-            <button type="submit" mix={buttonStyle}>
-              Try again
-            </button>
-          </form>
-        </div>
-      )
-    }
-
-    let openUrl = notebookOpenUrl(sprite)
+function NotebookOnboarding(
+  handle: Handle<{
+    sprite: UserSprite | null
+    error: string | null
+    message: string | null
+    csrfToken: string
+  }>,
+) {
+  return () => {
+    let { sprite, error, message, csrfToken } = handle.props
 
     return (
-      <div mix={statusBoxStyle}>
-        <p mix={leadStyle}>Your notebook environment is ready.</p>
-        <div mix={rowStyle}>
-          {openUrl && (
-            <a href={openUrl} target="_blank" rel="noreferrer" mix={buttonStyle}>
-              Open notebook
+      <div mix={centerColumnStyle}>
+        {error && ERROR_MESSAGES[error] && <p mix={contentErrorStyle}>{ERROR_MESSAGES[error]}</p>}
+        {message && <p mix={contentMutedTextStyle}>{message}</p>}
+
+        {(!sprite || sprite.status === 'deleted') && (
+          <>
+            <p mix={contentTextStyle}>You have not yet initialized your notebook server.</p>
+            <form method="post" action={routes.notebook.provision.href()}>
+              <input type="hidden" name="_csrf" value={csrfToken} />
+              <button type="submit" mix={primaryButtonStyle}>
+                Initialize
+              </button>
+            </form>
+          </>
+        )}
+
+        {sprite?.status === 'provisioning' && (
+          <>
+            <p mix={contentTextStyle}>
+              Setting up your notebook environment. This copies the reserve data into your own
+              sandbox and starts marimo -- it can take a minute.
+            </p>
+            <a href={routes.home.href()} mix={secondaryButtonStyle}>
+              Refresh
             </a>
-          )}
-          <form method="post" action={routes.notebook.reset.href()}>
-            <input type="hidden" name="_csrf" value={csrfToken} />
-            <button type="submit" mix={linkButtonStyle}>
-              Reset
-            </button>
-          </form>
-          <form method="post" action={routes.notebook.destroy.href()}>
-            <input type="hidden" name="_csrf" value={csrfToken} />
-            <button type="submit" mix={dangerLinkButtonStyle}>
-              Delete
-            </button>
-          </form>
-        </div>
+          </>
+        )}
+
+        {sprite?.status === 'error' && (
+          <>
+            <p mix={contentErrorStyle}>
+              Something went wrong setting up your notebook
+              {sprite.last_error ? `: ${sprite.last_error}` : '.'}
+            </p>
+            <form method="post" action={routes.notebook.provision.href()}>
+              <input type="hidden" name="_csrf" value={csrfToken} />
+              <button type="submit" mix={primaryButtonStyle}>
+                Try again
+              </button>
+            </form>
+          </>
+        )}
       </div>
     )
   }

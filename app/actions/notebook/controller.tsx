@@ -37,7 +37,7 @@ export default createController(routes.notebook, {
           `Failed to reset your notebook: ${error instanceof Error ? error.message : String(error)}`,
         )
       }
-      return redirect(routes.home.href())
+      return redirect(routes.settings.index.href())
     },
 
     async destroy(context) {
@@ -45,7 +45,7 @@ export default createController(routes.notebook, {
       let session = context.get(Session)
       await destroyUserSprite(user)
       session.flash('message', 'Your notebook has been deleted.')
-      return redirect(routes.home.href())
+      return redirect(routes.settings.index.href())
     },
   },
 })
