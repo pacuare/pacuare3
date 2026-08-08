@@ -1,11 +1,5 @@
 import { run } from 'remix/ui'
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-  })
-}
-
 run({
   async loadModule(moduleUrl, exportName) {
     let mod = await import(moduleUrl)
