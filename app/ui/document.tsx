@@ -16,7 +16,7 @@ export function Document(handle: Handle<DocumentProps>) {
     let { children, head, title = DEFAULT_TITLE } = handle.props
 
     return (
-      <html lang="en">
+      <html lang="en" mix={css({ margin: 0, background: '#16323C' })}>
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -25,8 +25,6 @@ export function Document(handle: Handle<DocumentProps>) {
           <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
           <meta name="theme-color" content="#16323C" />
           <meta name="mobile-web-app-capable" content="yes" />
-          <meta name="apple-mobile-web-app-capable" content="yes" />
-          <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
           <meta name="apple-mobile-web-app-title" content="Pacuare" />
           <title>{title}</title>
           {head}
