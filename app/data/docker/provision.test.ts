@@ -9,6 +9,7 @@ import {
   destroyUserSpace,
   generateNotebookToken,
   provisionUserSpace,
+  registryHostFor,
   spaceNameForUser,
   updateUserSpace,
   type ProvisionDeps,
@@ -27,6 +28,28 @@ describe('spaceNameForUser', () => {
     let a = spaceNameForUser(1, 'a.b@x.com')
     let b = spaceNameForUser(2, 'a-b@x.com')
     assert.notEqual(a, b)
+  })
+})
+
+describe('registryHostFor', () => {
+  it('pulls the host out of a private-registry image ref', () => {
+    assert.equal(
+      registryHostFor('packages.buildkite.com/aleks-rutins/pacuare/pacuare3-notebook:latest'),
+      'packages.buildkite.com',
+    )
+  })
+
+  it('recognizes a host:port ref', () => {
+    assert.equal(registryHostFor('localhost:5000/pacuare3-notebook:latest'), 'localhost:5000')
+  })
+
+  it('recognizes bare localhost with no port', () => {
+    assert.equal(registryHostFor('localhost/pacuare3-notebook:latest'), 'localhost')
+  })
+
+  it('returns undefined for a bare Docker Hub name, which has no registry host segment', () => {
+    assert.equal(registryHostFor('pacuare3-notebook:latest'), undefined)
+    assert.equal(registryHostFor('library/postgres:16'), undefined)
   })
 })
 
