@@ -58,3 +58,34 @@ steps:
         --tag "$$REGISTRY/pacuare3:$$branch_tag" \
         --push \
         .
+
+  # Same deal, for the image every user space's container runs (built from
+  # ./notebook, not the root Dockerfile). Also tagged `latest` on `main` --
+  # that's the tag settings' "Update" button re-pulls by default
+  # (`NOTEBOOK_IMAGE`), so a merge to main is what ships a marimo/system
+  # update to every space.
+  - label: ':docker: Build and publish notebook image'
+    depends_on:
+      - test
+    env:
+      REGISTRY: packages.buildkite.com/aleks-rutins/pacuare
+    command: |
+      buildkite-agent oidc request-token \
+        --audience "https://$$REGISTRY" \
+        --lifetime 300 \
+        | docker login "$$REGISTRY" --username buildkite --password-stdin
+      branch_tag="$${BUILDKITE_BRANCH//\//-}"
+      docker run --privileged --rm tonistiigi/binfmt --install all
+      docker buildx create --use --name pacuare-multiarch --driver docker-container \
+        || docker buildx use pacuare-multiarch
+      extra_tag=""
+      if [ "$$BUILDKITE_BRANCH" = "main" ]; then
+        extra_tag="--tag $$REGISTRY/pacuare3-notebook:latest"
+      fi
+      docker buildx build \
+        --platform linux/amd64,linux/arm64/v8 \
+        --tag "$$REGISTRY/pacuare3-notebook:$$BUILDKITE_COMMIT" \
+        --tag "$$REGISTRY/pacuare3-notebook:$$branch_tag" \
+        $$extra_tag \
+        --push \
+        ./notebook

@@ -1,6 +1,6 @@
 import { css, type Handle } from 'remix/ui'
 
-import type { AuthorizedUser, UserSprite } from '../data/schema.ts'
+import type { AuthorizedUser, Space } from '../data/schema.ts'
 import type { AppUser } from '../middleware/auth.ts'
 import { routes } from '../routes.ts'
 import {
@@ -22,7 +22,7 @@ import {
 
 export interface SettingsPageProps {
   user: AppUser
-  sprite: UserSprite | null
+  space: Space | null
   authorizedUsers: AuthorizedUser[] | null
   message: string | null
   csrfToken: string
@@ -30,7 +30,7 @@ export interface SettingsPageProps {
 
 export function SettingsPage(handle: Handle<SettingsPageProps>) {
   return () => {
-    let { user, sprite, authorizedUsers, message, csrfToken } = handle.props
+    let { user, space, authorizedUsers, message, csrfToken } = handle.props
 
     return (
       <AppShell user={user} active="settings" title="Settings - Pacuare Reserve">
@@ -39,8 +39,8 @@ export function SettingsPage(handle: Handle<SettingsPageProps>) {
 
           <ProfileSection user={user} csrfToken={csrfToken} />
 
-          {sprite && (sprite.status === 'ready' || sprite.status === 'error') && (
-            <NotebookSection sprite={sprite} csrfToken={csrfToken} />
+          {space && (space.status === 'ready' || space.status === 'error') && (
+            <NotebookSection space={space} csrfToken={csrfToken} />
           )}
 
           {authorizedUsers && (
@@ -80,18 +80,32 @@ function ProfileSection(handle: Handle<{ user: AppUser; csrfToken: string }>) {
   }
 }
 
-function NotebookSection(handle: Handle<{ sprite: UserSprite; csrfToken: string }>) {
+function NotebookSection(handle: Handle<{ space: Space; csrfToken: string }>) {
   return () => {
-    let { sprite, csrfToken } = handle.props
+    let { space, csrfToken } = handle.props
     return (
       <section mix={cardStyle}>
         <p mix={contentTitleStyle}>Your notebook</p>
         <p mix={contentTextStyle}>
-          {sprite.status === 'ready'
+          {space.status === 'ready'
             ? 'Your notebook environment is ready.'
-            : `Something went wrong setting up your notebook${sprite.last_error ? `: ${sprite.last_error}` : '.'}`}
+            : `Something went wrong setting up your notebook${space.last_error ? `: ${space.last_error}` : '.'}`}
         </p>
+        {space.status === 'ready' && (
+          <p mix={contentMutedTextStyle}>
+            "Update" re-pulls the latest marimo/system image and restarts your notebook's container.
+            Your notebook code and data live on a separate volume and aren't touched.
+          </p>
+        )}
         <div mix={rowStyle}>
+          {space.status === 'ready' && (
+            <form method="post" action={routes.notebook.update.href()}>
+              <input type="hidden" name="_csrf" value={csrfToken} />
+              <button type="submit" mix={secondaryButtonStyle}>
+                Update
+              </button>
+            </form>
+          )}
           <form method="post" action={routes.notebook.reset.href()}>
             <input type="hidden" name="_csrf" value={csrfToken} />
             <button type="submit" mix={secondaryButtonStyle}>

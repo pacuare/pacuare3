@@ -7,7 +7,7 @@ import {
   isNotebookProxyPath,
   resolveNotebookTarget,
   upstreamWsPath,
-} from './app/data/sprites/notebook-proxy.ts'
+} from './app/data/docker/notebook-proxy.ts'
 
 function formatHeaderLines(rawHeaders: string[]): string {
   let lines = ''

@@ -1,8 +1,10 @@
 # Pacuare3 Agent Guide
 
 This is the v3 Pacuare Reserve app: Google-authenticated management of
-per-user Sprites.dev marimo notebook sandboxes. It was scaffolded with
-`remix new`. Use these conventions when continuing to build it out.
+per-user marimo notebook "spaces" -- a Docker container + volume per user,
+provisioned by talking directly to the host Docker daemon (no third-party
+sandboxing service). It was scaffolded with `remix new`. Use these
+conventions when continuing to build it out.
 
 ## Commands
 
@@ -34,10 +36,11 @@ Refer to ./.agents/skills/remix/SKILL.md
 - `app/router.ts` wires routes to route handlers and middleware
 - `app/middleware/render.tsx` installs the request-scoped renderer used by actions
 - `app/middleware/session.ts`, `app/middleware/auth.ts` set up sessions, Google OAuth2, and role checks
-- `app/data/schema.ts`, `app/data/db.ts` are the app database (authorized users, cached Google profiles, sprite records)
+- `app/data/schema.ts`, `app/data/db.ts` are the app database (authorized users, cached Google profiles, space records)
 - `app/data/data-source.ts` is the separate, read-only "data" database holding canonical `pacuare_raw`
-- `app/data/sprites/` is the Sprites.dev API client and per-user provisioning logic
+- `app/data/docker/` is the Docker Engine API client and per-user space provisioning logic
 - `db/migrations/` holds SQL migrations for the app database
+- `notebook/` is the space container image (Dockerfile, entrypoint, bootstrap script, default notebook)
 - `app/ui/` holds the shared document shell and page UI
 - `app/assets.ts` owns the server-side asset pipeline used by the asset route and renderer
 - `public/` contains static files served from the app root

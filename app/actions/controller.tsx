@@ -5,7 +5,7 @@ import { getCsrfToken } from 'remix/middleware/csrf'
 import { Session } from 'remix/session'
 
 import { assetServer } from '../assets.ts'
-import { userSprites } from '../data/schema.ts'
+import { spaces } from '../data/schema.ts'
 import type { AppUser } from '../middleware/auth.ts'
 import { routes } from '../routes.ts'
 import { HomePage } from '../ui/home-page.tsx'
@@ -29,7 +29,7 @@ export default createController(routes, {
         return context.render(
           <HomePage
             user={null}
-            sprite={null}
+            space={null}
             error={error}
             message={typeof message === 'string' ? message : null}
             csrfToken={csrfToken}
@@ -40,12 +40,12 @@ export default createController(routes, {
 
       let user = authState.identity as AppUser
       let db = context.get(Database)
-      let sprite = await db.findOne(userSprites, { where: { user_id: user.id } })
+      let space = await db.findOne(spaces, { where: { user_id: user.id } })
 
       return context.render(
         <HomePage
           user={user}
-          sprite={sprite ?? null}
+          space={space ?? null}
           error={error}
           message={typeof message === 'string' ? message : null}
           csrfToken={csrfToken}

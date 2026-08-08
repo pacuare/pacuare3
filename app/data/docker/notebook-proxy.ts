@@ -1,21 +1,23 @@
 // Proxies the embedded notebook iframe through our own origin instead of the
-// sprite's cross-site domain.
+// space container's own address.
 //
-// Why: the iframe used to point straight at the sprite's own URL. marimo
-// authenticates with a `SameSite=Lax` session cookie, but a cross-site iframe
-// never sends that cookie on anything after the first navigation (WS
-// handshake, API calls) -- browsers compute SameSite eligibility from the
-// whole frame ancestry, not just the immediate document. Every one of those
-// requests then looks unauthenticated, marimo redirects to its login page,
-// and that page hard-codes `X-Frame-Options: DENY`, so the iframe goes
-// blank. Serving the notebook from our own origin makes the cookie first
-// party again, and injecting a Bearer token server-side means we never
-// depend on that cookie in the first place.
+// Why: the iframe used to point straight at the sprite's own cross-site
+// URL. marimo authenticates with a `SameSite=Lax` session cookie, but a
+// cross-site iframe never sends that cookie on anything after the first
+// navigation (WS handshake, API calls) -- browsers compute SameSite
+// eligibility from the whole frame ancestry, not just the immediate
+// document. Every one of those requests then looks unauthenticated, marimo
+// redirects to its login page, and that page hard-codes
+// `X-Frame-Options: DENY`, so the iframe goes blank. Serving the notebook
+// from our own origin makes the cookie first party again, and injecting a
+// Bearer token server-side means we never depend on that cookie in the
+// first place. That reasoning is unchanged now that the target is a
+// container on our own Docker network rather than a sprite.
 
 import { createFetchProxy } from 'remix/fetch-proxy'
 
 import { db } from '../db.ts'
-import { userSprites } from '../schema.ts'
+import { spaces } from '../schema.ts'
 import { verifySessionAuth, type AppUser } from '../../middleware/auth.ts'
 import { sessionCookie, sessionStorage } from '../../middleware/session.ts'
 
@@ -30,7 +32,7 @@ export interface NotebookProxyTarget {
   token: string
 }
 
-/** Resolves the raw `Cookie` header (from either a fetch `Request` or a Node upgrade request) to the current user's own ready notebook, or `null` if there isn't one. */
+/** Resolves the raw `Cookie` header (from either a fetch `Request` or a Node upgrade request) to the current user's own ready space, or `null` if there isn't one. */
 export async function resolveNotebookTarget(
   cookieHeader: string | null | undefined,
 ): Promise<NotebookProxyTarget | null> {
@@ -44,12 +46,12 @@ export async function resolveNotebookTarget(
   let user: AppUser | null = await verifySessionAuth(authValue)
   if (!user) return null
 
-  let sprite = await db.findOne(userSprites, { where: { user_id: user.id } })
-  if (!sprite || sprite.status !== 'ready' || !sprite.notebook_url || !sprite.notebook_token) {
+  let space = await db.findOne(spaces, { where: { user_id: user.id } })
+  if (!space || space.status !== 'ready' || !space.notebook_url || !space.notebook_token) {
     return null
   }
 
-  return { url: sprite.notebook_url, token: sprite.notebook_token }
+  return { url: space.notebook_url, token: space.notebook_token }
 }
 
 function upstreamPathFor(pathname: string, search: string): string {
@@ -57,7 +59,7 @@ function upstreamPathFor(pathname: string, search: string): string {
   return `${rest}${search}`
 }
 
-/** Proxies one HTTP request through to the target sprite's marimo server, authenticating with a Bearer token instead of relying on marimo's own cookie. */
+/** Proxies one HTTP request through to the target space's marimo server, authenticating with a Bearer token instead of relying on marimo's own cookie. */
 export async function proxyNotebookRequest(
   request: Request,
   target: NotebookProxyTarget,
@@ -66,7 +68,7 @@ export async function proxyNotebookRequest(
   let url = new URL(request.url)
 
   let headers = new Headers(request.headers)
-  // Never forward our own (or any) cookie upstream: the sprite runs the
+  // Never forward our own (or any) cookie upstream: the space runs the
   // user's own arbitrary notebook code, and our httpOnly cookie is still
   // readable by the server process it's sent to.
   headers.delete('Cookie')

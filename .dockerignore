@@ -3,6 +3,7 @@ node_modules/
 test/
 .buildkite/
 .agents/
+notebook/
 db/*.sqlite
 tmp/
 .env

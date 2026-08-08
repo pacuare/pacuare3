@@ -17,7 +17,6 @@ services:
       SESSION_SECRET: ci-session-secret
       GOOGLE_CLIENT_ID: ci-client-id
       GOOGLE_CLIENT_SECRET: ci-client-secret
-      SPRITES_TOKEN: ci-sprites-token
 
   postgres:
     image: postgres:16-bookworm
