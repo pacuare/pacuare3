@@ -14,6 +14,7 @@ import { loadDatabase } from './data/db.ts'
 import { render } from './middleware/render.tsx'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { routes } from './routes.ts'
+import { env } from './data/env.ts'
 
 type AppContext = MiddlewareContext<
   [
@@ -38,7 +39,7 @@ export const router = createRouter<AppContext>({
     render(),
     session(sessionCookie, sessionStorage),
     formData(),
-    csrf(),
+    csrf({ origin: env.appOrigin }),
     loadDatabase(),
     loadAuth(),
   ],
