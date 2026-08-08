@@ -49,6 +49,13 @@ describe('protected routes without a session', () => {
     )
     assert.equal(response.ok, false)
   })
+
+  it('rejects POST /notebook/update', async () => {
+    let response = await router.fetch(
+      new Request('http://localhost' + routes.notebook.update.href(), { method: 'POST' }),
+    )
+    assert.equal(response.ok, false)
+  })
 })
 
 describe('notebook iframe proxy', () => {
@@ -62,11 +69,11 @@ describe('notebook iframe proxy', () => {
     return
   }
 
-  it("404s for an authenticated user who hasn't provisioned a sprite", async () => {
+  it("404s for an authenticated user who hasn't provisioned a space", async () => {
     let email = uniqueEmail('notebook-proxy-route')
     let user = await db.create(
       users,
-      { email, google_sub: uniqueEmail('sub'), name: 'No Sprite Yet' },
+      { email, google_sub: uniqueEmail('sub'), name: 'No Space Yet' },
       { returnRow: true },
     )
     await db.create(authorizedUsers, { email, role: 'member', added_by: 'test' })
@@ -209,7 +216,7 @@ describe('home page when signed in', () => {
     return
   }
 
-  it('offers to set up a notebook for a user with no sprite yet', async () => {
+  it('offers to set up a notebook for a user with no space yet', async () => {
     let email = uniqueEmail('newmember')
     let user = await db.create(
       users,

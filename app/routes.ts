@@ -15,6 +15,7 @@ export const routes = route({
   notebook: route('notebook', {
     provision: post('provision'),
     reset: post('reset'),
+    update: post('update'),
     destroy: post('destroy'),
   }),
 

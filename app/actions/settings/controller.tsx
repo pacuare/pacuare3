@@ -4,7 +4,7 @@ import { Database } from 'remix/data-table'
 import { getCsrfToken } from 'remix/middleware/csrf'
 import { Session } from 'remix/session'
 
-import { authorizedUsers, userSprites } from '../../data/schema.ts'
+import { authorizedUsers, spaces } from '../../data/schema.ts'
 import type { AppUser } from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
 import { SettingsPage } from '../../ui/settings-page.tsx'
@@ -17,7 +17,7 @@ export default createController(routes.settings, {
       let user = context.get(Auth).identity as AppUser
       let session = context.get(Session)
 
-      let sprite = await db.findOne(userSprites, { where: { user_id: user.id } })
+      let space = await db.findOne(spaces, { where: { user_id: user.id } })
       let allUsers =
         user.role === 'admin'
           ? await db.findMany(authorizedUsers, { orderBy: ['created_at', 'asc'] })
@@ -27,7 +27,7 @@ export default createController(routes.settings, {
       return context.render(
         <SettingsPage
           user={user}
-          sprite={sprite ?? null}
+          space={space ?? null}
           authorizedUsers={allUsers}
           message={typeof message === 'string' ? message : null}
           csrfToken={getCsrfToken(context)}

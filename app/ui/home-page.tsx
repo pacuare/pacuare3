@@ -1,6 +1,6 @@
 import { attrs, css, type Handle } from 'remix/ui'
 
-import type { UserSprite } from '../data/schema.ts'
+import type { Space } from '../data/schema.ts'
 import type { AppUser } from '../middleware/auth.ts'
 import { routes } from '../routes.ts'
 import {
@@ -24,7 +24,7 @@ import {
 
 export interface HomePageProps {
   user: AppUser | null
-  sprite: UserSprite | null
+  space: Space | null
   error: string | null
   message: string | null
   csrfToken: string
@@ -39,7 +39,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 export function HomePage(handle: Handle<HomePageProps>) {
   return () => {
-    let { user, sprite, error, message, csrfToken, loginHref } = handle.props
+    let { user, space, error, message, csrfToken, loginHref } = handle.props
 
     if (!user) {
       return (
@@ -53,11 +53,11 @@ export function HomePage(handle: Handle<HomePageProps>) {
     }
 
     return (
-      <AppShell user={user} active="home" title="Pacuare Reserve" padded={sprite?.status !== 'ready'}>
-        {sprite?.status === 'ready' ? (
-          <NotebookFrame sprite={sprite} />
+      <AppShell user={user} active="home" title="Pacuare Reserve" padded={space?.status !== 'ready'}>
+        {space?.status === 'ready' ? (
+          <NotebookFrame space={space} />
         ) : (
-          <NotebookOnboarding sprite={sprite} error={error} message={message} csrfToken={csrfToken} />
+          <NotebookOnboarding space={space} error={error} message={message} csrfToken={csrfToken} />
         )}
       </AppShell>
     )
@@ -79,12 +79,12 @@ function SignedOut(handle: Handle<{ loginHref: string }>) {
 
 const iframeStyle = css({ border: '0', width: '100%', height: '100%', flex: '1' })
 
-function NotebookFrame(handle: Handle<{ sprite: UserSprite }>) {
+function NotebookFrame(handle: Handle<{ space: Space }>) {
   return () => {
-    let { sprite } = handle.props
-    if (!sprite.notebook_url) return null
+    let { space } = handle.props
+    if (!space.notebook_url) return null
     // Proxied through our own origin (see app/middleware/notebook-proxy.ts)
-    // rather than linking straight to the sprite's cross-site URL: marimo's
+    // rather than linking straight at the space's container address: marimo's
     // session cookie can't survive being set from inside a cross-site
     // iframe, so the notebook needs to look same-origin to the browser.
     return <iframe src="/notebook/app/" title="Your notebook" mix={iframeStyle} />
@@ -93,21 +93,21 @@ function NotebookFrame(handle: Handle<{ sprite: UserSprite }>) {
 
 function NotebookOnboarding(
   handle: Handle<{
-    sprite: UserSprite | null
+    space: Space | null
     error: string | null
     message: string | null
     csrfToken: string
   }>,
 ) {
   return () => {
-    let { sprite, error, message, csrfToken } = handle.props
+    let { space, error, message, csrfToken } = handle.props
 
     return (
       <div mix={centerColumnStyle}>
         {error && ERROR_MESSAGES[error] && <p mix={contentErrorStyle}>{ERROR_MESSAGES[error]}</p>}
         {message && <p mix={contentMutedTextStyle}>{message}</p>}
 
-        {(!sprite || sprite.status === 'deleted') && (
+        {(!space || space.status === 'deleted') && (
           <>
             <p mix={contentTextStyle}>You have not yet initialized your notebook server.</p>
             <form method="post" action={routes.notebook.provision.href()}>
@@ -119,7 +119,7 @@ function NotebookOnboarding(
           </>
         )}
 
-        {sprite?.status === 'provisioning' && (
+        {space?.status === 'provisioning' && (
           <>
             <p mix={contentTextStyle}>
               Setting up your notebook environment. This copies the reserve data into your own
@@ -131,11 +131,11 @@ function NotebookOnboarding(
           </>
         )}
 
-        {sprite?.status === 'error' && (
+        {space?.status === 'error' && (
           <>
             <p mix={contentErrorStyle}>
               Something went wrong setting up your notebook
-              {sprite.last_error ? `: ${sprite.last_error}` : '.'}
+              {space.last_error ? `: ${space.last_error}` : '.'}
             </p>
             <form method="post" action={routes.notebook.provision.href()}>
               <input type="hidden" name="_csrf" value={csrfToken} />

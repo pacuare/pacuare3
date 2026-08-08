@@ -2,7 +2,7 @@ import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
 import { db } from '../db.ts'
-import { authorizedUsers, userSprites, users, type User } from '../schema.ts'
+import { authorizedUsers, spaces, users, type User } from '../schema.ts'
 import { authCookieHeader, hasTestDatabase, uniqueEmail } from '../../../test/helpers.ts'
 import {
   isNotebookProxyPath,
@@ -62,36 +62,36 @@ describe('resolveNotebookTarget', () => {
     assert.equal(await resolveNotebookTarget('pacuare_session=not-a-real-session'), null)
   })
 
-  it('returns null when the user has no sprite yet', async () => {
+  it('returns null when the user has no space yet', async () => {
     let user = await createAuthorizedUser()
     let cookie = await authCookieHeader(user.id)
     assert.equal(await resolveNotebookTarget(cookie), null)
   })
 
-  it('returns null when the sprite exists but is not ready', async () => {
+  it('returns null when the space exists but is not ready', async () => {
     let user = await createAuthorizedUser()
-    await db.create(userSprites, {
+    await db.create(spaces, {
       user_id: user.id,
-      name: uniqueEmail('pending-sprite'),
+      name: uniqueEmail('pending-space'),
       status: 'provisioning',
     })
     let cookie = await authCookieHeader(user.id)
     assert.equal(await resolveNotebookTarget(cookie), null)
   })
 
-  it('returns the sprite url and token once the sprite is ready', async () => {
+  it('returns the space url and token once the space is ready', async () => {
     let user = await createAuthorizedUser()
-    await db.create(userSprites, {
+    await db.create(spaces, {
       user_id: user.id,
-      name: uniqueEmail('ready-sprite'),
+      name: uniqueEmail('ready-space'),
       status: 'ready',
-      notebook_url: 'https://ready-sprite.sprites.app',
+      notebook_url: 'http://172.19.0.5:8080',
       notebook_token: 'the-token',
     })
     let cookie = await authCookieHeader(user.id)
 
     assert.deepEqual(await resolveNotebookTarget(cookie), {
-      url: 'https://ready-sprite.sprites.app',
+      url: 'http://172.19.0.5:8080',
       token: 'the-token',
     })
   })
@@ -113,13 +113,13 @@ describe('proxyNotebookRequest', () => {
 
     let response = await proxyNotebookRequest(
       request,
-      { url: 'https://some-sprite.sprites.app', token: 'sprite-token' },
+      { url: 'http://172.19.0.5:8080', token: 'space-token' },
       fakeFetch,
     )
 
     assert.equal(response.status, 200)
-    assert.equal(seen?.url, 'https://some-sprite.sprites.app/api/kernel/execute?x=1')
-    assert.equal(seen?.headers.get('Authorization'), 'Bearer sprite-token')
+    assert.equal(seen?.url, 'http://172.19.0.5:8080/api/kernel/execute?x=1')
+    assert.equal(seen?.headers.get('Authorization'), 'Bearer space-token')
     assert.equal(seen?.headers.get('Cookie'), null)
   })
 })

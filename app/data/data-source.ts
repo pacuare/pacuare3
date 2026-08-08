@@ -4,7 +4,7 @@ import { env } from './env.ts'
 
 // Read-only connection to the main "data" database, which is intentionally
 // separate from the app database above. It holds the canonical
-// `pacuare_raw` table that every user's sprite gets a copy of.
+// `pacuare_raw` table that every user's space gets a copy of.
 const dataPool = new Pool({ connectionString: env.dataDatabaseUrl })
 
 export interface TableExport {

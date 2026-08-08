@@ -1,7 +1,7 @@
 -- Runs once when the CI Postgres container first starts (see
 -- docker-entrypoint-initdb.d in the official postgres image). Creates the
 -- second "data" database and seeds it with a tiny `pacuare_raw` table so
--- app/data/data-source.test.ts and app/data/sprites/provision.test.ts have
+-- app/data/data-source.test.ts and app/data/docker/provision.test.ts have
 -- something real to read.
 create database pacuare_data_test;
 

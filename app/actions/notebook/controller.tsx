@@ -3,7 +3,11 @@ import { Auth, requireAuth } from 'remix/middleware/auth'
 import { redirect } from 'remix/response/redirect'
 import { Session } from 'remix/session'
 
-import { destroyUserSprite, provisionUserSprite } from '../../data/sprites/provision.ts'
+import {
+  destroyUserSpace,
+  provisionUserSpace,
+  updateUserSpace,
+} from '../../data/docker/provision.ts'
 import type { AppUser } from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
 
@@ -14,7 +18,7 @@ export default createController(routes.notebook, {
       let user = context.get(Auth).identity as AppUser
       let session = context.get(Session)
       try {
-        await provisionUserSprite(user)
+        await provisionUserSpace(user)
         session.flash('message', 'Your notebook is ready.')
       } catch (error) {
         session.flash(
@@ -29,7 +33,7 @@ export default createController(routes.notebook, {
       let user = context.get(Auth).identity as AppUser
       let session = context.get(Session)
       try {
-        await provisionUserSprite(user)
+        await provisionUserSpace(user)
         session.flash('message', 'Your notebook has been reset with a fresh copy of the data.')
       } catch (error) {
         session.flash(
@@ -40,10 +44,25 @@ export default createController(routes.notebook, {
       return redirect(routes.settings.index.href())
     },
 
+    async update(context) {
+      let user = context.get(Auth).identity as AppUser
+      let session = context.get(Session)
+      try {
+        await updateUserSpace(user)
+        session.flash('message', 'Your notebook has been updated to the latest version.')
+      } catch (error) {
+        session.flash(
+          'message',
+          `Failed to update your notebook: ${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
+      return redirect(routes.settings.index.href())
+    },
+
     async destroy(context) {
       let user = context.get(Auth).identity as AppUser
       let session = context.get(Session)
-      await destroyUserSprite(user)
+      await destroyUserSpace(user)
       session.flash('message', 'Your notebook has been deleted.')
       return redirect(routes.settings.index.href())
     },
