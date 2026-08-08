@@ -33,6 +33,11 @@ steps:
 
   # Only publishes once the tests above pass; docker buildx build --push
   # itself won't attempt the push if the build stage fails.
+  #
+  # Publishes both linux/amd64 and linux/arm64/v8. The agent is amd64-only,
+  # so the arm64 side is cross-compiled under QEMU emulation (registered via
+  # tonistiigi/binfmt); a docker-container buildx builder is required since
+  # the default docker driver can't push a multi-platform manifest list.
   - label: ':docker: Build and publish image'
     depends_on:
       - test
@@ -44,7 +49,11 @@ steps:
         --lifetime 300 \
         | docker login "$$REGISTRY" --username buildkite --password-stdin
       branch_tag="$${BUILDKITE_BRANCH//\//-}"
+      docker run --privileged --rm tonistiigi/binfmt --install all
+      docker buildx create --use --name pacuare-multiarch --driver docker-container \
+        || docker buildx use pacuare-multiarch
       docker buildx build \
+        --platform linux/amd64,linux/arm64/v8 \
         --tag "$$REGISTRY/pacuare3:$$BUILDKITE_COMMIT" \
         --tag "$$REGISTRY/pacuare3:$$branch_tag" \
         --push \
