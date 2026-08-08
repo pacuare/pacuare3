@@ -8,6 +8,7 @@ RUN npm ci --omit=dev
 COPY app ./app
 COPY public ./public
 COPY scripts ./scripts
+COPY db ./db
 COPY server.ts tsconfig.json ./
 
 ENV NODE_ENV=production
