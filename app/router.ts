@@ -12,6 +12,7 @@ import settingsController from './actions/settings/controller.tsx'
 import adminController from './actions/admin/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './data/db.ts'
+import { notebookProxy } from './middleware/notebook-proxy.ts'
 import { render } from './middleware/render.tsx'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { routes } from './routes.ts'
@@ -37,6 +38,7 @@ declare module 'remix/router' {
 export const router = createRouter<AppContext>({
   middleware: [
     staticFiles('./public', { index: false }),
+    notebookProxy(),
     render(),
     session(sessionCookie, sessionStorage),
     formData(),

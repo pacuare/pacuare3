@@ -51,6 +51,34 @@ describe('protected routes without a session', () => {
   })
 })
 
+describe('notebook iframe proxy', () => {
+  it('404s for an unauthenticated request instead of falling through to routing', async () => {
+    let response = await router.fetch(new Request('http://localhost/notebook/app/'))
+    assert.equal(response.status, 404)
+  })
+
+  if (!hasTestDatabase) {
+    it.skip('requires DATABASE_URL', () => {})
+    return
+  }
+
+  it("404s for an authenticated user who hasn't provisioned a sprite", async () => {
+    let email = uniqueEmail('notebook-proxy-route')
+    let user = await db.create(
+      users,
+      { email, google_sub: uniqueEmail('sub'), name: 'No Sprite Yet' },
+      { returnRow: true },
+    )
+    await db.create(authorizedUsers, { email, role: 'member', added_by: 'test' })
+    let cookie = await authCookieHeader(user.id)
+
+    let response = await router.fetch(
+      new Request('http://localhost/notebook/app/', { headers: { Cookie: cookie } }),
+    )
+    assert.equal(response.status, 404)
+  })
+})
+
 describe('csrf protection', () => {
   if (!hasTestDatabase) {
     it.skip('requires DATABASE_URL', () => {})

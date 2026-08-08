@@ -77,20 +77,17 @@ function SignedOut(handle: Handle<{ loginHref: string }>) {
   )
 }
 
-/** The sprite's URL, with marimo's access token attached so the link logs the user straight in. */
-function notebookOpenUrl(sprite: UserSprite): string | null {
-  if (!sprite.notebook_url) return null
-  if (!sprite.notebook_token) return sprite.notebook_url
-  return `${sprite.notebook_url}?access_token=${encodeURIComponent(sprite.notebook_token)}`
-}
-
 const iframeStyle = css({ border: '0', width: '100%', height: '100%', flex: '1' })
 
 function NotebookFrame(handle: Handle<{ sprite: UserSprite }>) {
   return () => {
-    let openUrl = notebookOpenUrl(handle.props.sprite)
-    if (!openUrl) return null
-    return <iframe src={openUrl} title="Your notebook" mix={iframeStyle} />
+    let { sprite } = handle.props
+    if (!sprite.notebook_url) return null
+    // Proxied through our own origin (see app/middleware/notebook-proxy.ts)
+    // rather than linking straight to the sprite's cross-site URL: marimo's
+    // session cookie can't survive being set from inside a cross-site
+    // iframe, so the notebook needs to look same-origin to the browser.
+    return <iframe src="/notebook/app/" title="Your notebook" mix={iframeStyle} />
   }
 }
 
