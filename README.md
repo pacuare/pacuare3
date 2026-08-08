@@ -88,8 +88,9 @@ npm run db:migrate && npm test
 
 `.buildkite/pipeline.yml` runs typecheck, lint, and the full test suite
 (against a real Postgres via `.buildkite/docker-compose.yml`) on every push.
-It also builds `Dockerfile` and publishes the image, tagged with the commit
-SHA, to the `pacuare` Buildkite Package Registry
+It also builds `Dockerfile` for `linux/amd64` and `linux/arm64/v8` and
+publishes a multi-platform image, tagged with the commit SHA, to the
+`pacuare` Buildkite Package Registry
 (`packages.buildkite.com/pacuare/pacuare`) for the existing container
 infrastructure to deploy from.
 
